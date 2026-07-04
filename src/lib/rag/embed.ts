@@ -25,6 +25,6 @@ export async function embedText(text: string): Promise<number[]> {
     throw new Error(`Cohere embed failed (${res.status}): ${err}`);
   }
 
-  const data = await reson() as { embeddings: number[][] };
+  const data = await res.json() as { embeddings: number[][] };
   return data.embeddings[0]; // 1024 dimensions to match corpus_chunks.embedding vector(1024)
 }
