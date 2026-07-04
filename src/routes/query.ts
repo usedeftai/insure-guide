@@ -10,11 +10,10 @@ import {
   getLongTermMemory,
   getActiveSessionMessages,
 } from "../lib/memory/conversation-memory";
-import { createComponentLogger, logError } from "../lib/logger";
+import { createComponentLogger, logError, logger } from "../lib/logger";
 import {
   createOpenAIStreamResponse,
   extractQueryIdentity,
-  parseOpenAIMessages,
   type QueryRequestBody,
 } from "../lib/query/openai-stream";
 import { createAgentTools } from "../lib/tools/index";
@@ -42,6 +41,7 @@ export async function handleQuery(c: Context) {
 
   try {
     const body = await c.req.json<QueryRequestBody>();
+    logger.info("query request received", { body });
     const identity = extractQueryIdentity(body);
 
     const [longTermMemory, profile] = await Promise.all([
@@ -56,11 +56,13 @@ export async function handleQuery(c: Context) {
     const profileBlock = formatProfileForPrompt(profile);
     const baseSystem = buildSystemPrompt(profileBlock, longTermMemory);
 
-    let messages: ModelMessage[] = body.messages?.length
-      ? parseOpenAIMessages(body.messages)
-      : identity.sessionId
-        ? await getActiveSessionMessages(identity.sessionId)
-        : [];
+    const history: ModelMessage[] = identity.sessionId
+      ? await getActiveSessionMessages(identity.sessionId)
+      : [];
+
+    const messages: ModelMessage[] = body.query
+      ? [...history, { role: "user", content: body.query }]
+      : history;
 
     if (identity.sessionId) {
       await ensureActiveSession(identity.sessionId, identity);
@@ -86,7 +88,7 @@ export async function handleQuery(c: Context) {
     const result = streamText({
       model: getModel(modelName),
       system: baseSystem,
-      messages,
+      prompt: messages,
       tools,
       stopWhen: stepCountIs(5),
       temperature: 0.2,
@@ -100,13 +102,9 @@ export async function handleQuery(c: Context) {
 
         if (!identity.sessionId) return;
 
-        const lastUser = [...messages].reverse().find((m) => m.role === "user");
-        const userContent =
-          typeof lastUser?.content === "string" ? lastUser.content : "";
-
         const turns = [];
-        if (userContent) {
-          turns.push({ role: "user", message: userContent });
+        if (body.query) {
+          turns.push({ role: "user", message: body.query });
         }
         if (text.trim()) {
           turns.push({ role: "bot", message: text.trim() });
@@ -118,6 +116,7 @@ export async function handleQuery(c: Context) {
 
     if (body.stream === false) {
       const text = await result.text;
+      //return c.text(text);
       return c.json({
         id: `chatcmpl-${crypto.randomUUID()}`,
         object: "chat.completion",

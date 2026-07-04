@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { logger } from "./lib/logger";
 import { handleQuery } from "./routes/query";
 import { handleVapiWebhook } from "./routes/vapi-webhook";
 import { formRoutes } from "./routes/forms";
@@ -46,3 +47,9 @@ app.post("/webhook/vapi", handleVapiWebhook);
 app.route("/api/forms", formRoutes);
 
 export default app;
+
+if (import.meta.main) {
+  const port = Number(process.env.PORT) || 3001;
+  logger.info(`Server listening on http://localhost:${port}`);
+  Bun.serve({ port, fetch: app.fetch });
+}
