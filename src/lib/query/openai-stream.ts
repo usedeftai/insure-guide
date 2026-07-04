@@ -85,16 +85,16 @@ export function createOpenAIStreamResponse(
           );
         }
 
-        const finishPayload = {
-          id: completionId,
-          object: "chat.completion.chunk",
-          created,
-          model,
-          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
-        };
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(finishPayload)}\n\n`)
-        );
+        // const finishPayload = {
+        //   id: completionId,
+        //   object: "chat.completion.chunk",
+        //   created,
+        //   model,
+        //   choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+        // };
+        // controller.enqueue(
+        //   encoder.encode(`data: ${JSON.stringify(finishPayload)}\n\n`)
+        // );
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       } catch (error) {
