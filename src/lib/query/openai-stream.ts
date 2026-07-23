@@ -1,12 +1,5 @@
-import type { ModelMessage } from "ai";
-
-export interface OpenAIChatMessage {
-  role: string;
-  content?: string | unknown;
-}
-
 export interface QueryRequestBody {
-  messages?: OpenAIChatMessage[];
+  query?: string;
   stream?: boolean;
   session_id?: string;
   user_id?: string;
@@ -23,20 +16,6 @@ export interface QueryRequestBody {
     phone_number?: string;
     session_id?: string;
   };
-}
-
-export function parseOpenAIMessages(messages: OpenAIChatMessage[]): ModelMessage[] {
-  return messages
-    .filter((message) => message.role !== "system")
-    .map((message) => ({
-      role: message.role === "assistant" ? ("assistant" as const) : ("user" as const),
-      content:
-        typeof message.content === "string"
-          ? message.content
-          : message.content != null
-            ? JSON.stringify(message.content)
-            : "",
-    }));
 }
 
 export function extractQueryIdentity(body: QueryRequestBody): {

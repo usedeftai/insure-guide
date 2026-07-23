@@ -1,6 +1,10 @@
 {
   "name": "hono",
   "type": "module",
+  "scripts": {
+    "dev": "bun --hot src/index.ts",
+    "dev:vercel": "vc dev"
+  },
   "dependencies": {
     "hono": "^4.8.9",
     "@ai-sdk/anthropic": "^3.0.85",
