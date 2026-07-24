@@ -10,6 +10,7 @@ from .config import LLMProvider, Settings
 _SSN = re.compile(r"\b\d{3}[- ]?\d{2}[- ]?\d{4}\b")
 _EMAIL = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
 _PHONE = re.compile(r"(?<!\d)(?:\+?1[-. ()]?)?(?:\d{3}[-. ()]?){2}\d{4}(?!\d)")
+_THINKING = re.compile(r"<think>.*?</think>", re.IGNORECASE | re.DOTALL)
 
 
 def redact_text(value: str) -> str:
@@ -52,6 +53,8 @@ async def summarize_call(messages: list[dict[str, Any]], settings: Settings) -> 
             {"role": "user", "content": transcript},
         ],
     }
+    if settings.llm_provider == LLMProvider.OLLAMA:
+        request["think"] = False
     try:
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(settings.summary_timeout_seconds)
@@ -64,6 +67,7 @@ async def summarize_call(messages: list[dict[str, Any]], settings: Settings) -> 
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
             if isinstance(content, str) and content.strip():
+                content = _THINKING.sub("", content)
                 return redact_text(content.strip())[:8000]
     except (httpx.HTTPError, KeyError, IndexError, TypeError):
         pass
