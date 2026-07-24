@@ -3,7 +3,6 @@ from pydantic import ValidationError
 
 from insure_voice.config import LLMProvider, Settings, STTProvider, TTSProvider
 
-
 BASE = {
     "VOICE_SERVICE_TOKEN": "v" * 32,
     "TWILIO_ACCOUNT_SID": "AC_test",
@@ -14,7 +13,7 @@ BASE = {
 def test_local_profile_defaults_to_private_providers(monkeypatch: pytest.MonkeyPatch) -> None:
     for key, value in BASE.items():
         monkeypatch.setenv(key, value)
-    settings = Settings(_env_file=None)
+    settings = Settings(_env_file=None)  # pyright: ignore[reportCallIssue]
     assert settings.llm_provider == LLMProvider.OLLAMA
     assert settings.tts_provider == TTSProvider.KOKORO
     assert settings.allow_external_ai is False
@@ -26,4 +25,12 @@ def test_cloud_provider_requires_explicit_policy(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("STT_PROVIDER", STTProvider.DEEPGRAM_FLUX)
     monkeypatch.setenv("DEEPGRAM_API_KEY", "key")
     with pytest.raises(ValidationError, match="ALLOW_EXTERNAL_AI"):
-        Settings(_env_file=None)
+        Settings(_env_file=None)  # pyright: ignore[reportCallIssue]
+
+
+def test_public_base_url_must_be_an_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    for key, value in BASE.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("VOICE_PUBLIC_BASE_URL", "https://voice.example.com/not-an-origin")
+    with pytest.raises(ValidationError, match="must not include a path"):
+        Settings(_env_file=None)  # pyright: ignore[reportCallIssue]
